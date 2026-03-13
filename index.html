@@ -69,7 +69,11 @@ bottom:12px;
 right:12px;
 font-size:24px;
 cursor:pointer;
-opacity:.8;
+opacity:.1;
+transition:opacity 0.2s ease;
+}
+
+#gear:hover{opacity:.8;
 }
 
 #configModal{
@@ -93,7 +97,7 @@ font-size:13px;
 }
 
 input,select{
-width:100%;
+/*width:100%;*/
 padding:6px;
 margin-top:4px;
 }
@@ -133,34 +137,25 @@ flex:1;
 <input id="endDate" type="datetime-local">
 
 <label>
-<input type="checkbox" id="fullDays"> Count full days
+<input type="checkbox" id="fullDays" value="true"> Count full days
 </label>
+<div id="segments">
+    <label>Morning segment</label>
+    <div class="row">
+        <input id="start1" type="time" value="08:00">
+        <input id="end1" type="time" value="12:00">
+    </div>
+    <label>Afternoon segment</label>
+    <div class="row">
+        <input id="start2" type="time" value="13:00">
+        <input id="end2" type="time" value="17:00">
+    </div>
+</div>
 
 <label>
 <input type="checkbox" id="excludeHolidays"> Only count workdays (in Sweden)
 </label>
 
-<label>Morning segment</label>
-
-<div id="segments">
-
-<div class="row">
-
-<input id="start1" type="time" value="08:00">
-<input id="end1" type="time" value="12:00">
-
-</div>
-
-<label>Afternoon segment</label>
-
-<div class="row">
-
-<input id="start2" type="time" value="13:00">
-<input id="end2" type="time" value="17:00">
-
-</div>
-
-</div>
 
 </div>
 
@@ -507,17 +502,25 @@ applySettings(JSON.parse(s))
 
 /* ---------- UI ---------- */
 
-gear.onclick=()=>{
+gear.onclick=(e)=>{
 
+e.stopPropagation()
 configModal.style.display=
 configModal.style.display==="block"?"none":"block"
 
 }
 
+document.addEventListener("click",(e)=>{
+if(configModal.style.display==="block"&&!configModal.contains(e.target)){
+configModal.style.display="none"
+}
+})
+
 function toggleSegments(){
-segments.style.display=excludeHolidays.checked?"none":"block"
+segments.style.display=fullDays.checked?"none":"block"
 }
 
+fullDays.addEventListener("change",toggleSegments)
 excludeHolidays.addEventListener("change",toggleSegments)
 toggleSegments()
 
