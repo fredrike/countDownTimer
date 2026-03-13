@@ -489,14 +489,18 @@ let hash=readHash()
 if(hash){
 
 applySettings(hash)
-return
+return true
 
 }
 
 let s=localStorage.getItem(STORAGE)
 
-if(s)
+if(s){
 applySettings(JSON.parse(s))
+return true
+}
+
+return false
 
 }
 
@@ -525,20 +529,33 @@ excludeHolidays.addEventListener("change",toggleSegments)
 toggleSegments()
 
 const formatEl=document.getElementById("format")
-document.addEventListener("mouseenter",()=>{
+
+function showFormat(){
 formatEl.style.opacity="1"
 formatEl.style.maxHeight="50px"
 formatEl.style.marginTop="20px"
 formatEl.style.padding="6px 12px"
 formatEl.style.pointerEvents="auto"
-})
-document.addEventListener("mouseleave",()=>{
+}
+
+function hideFormat(){
 formatEl.style.opacity="0"
 formatEl.style.maxHeight="0"
 formatEl.style.marginTop="0"
 formatEl.style.padding="0 12px"
 formatEl.style.pointerEvents="none"
-})
+}
+
+document.addEventListener("mouseenter",showFormat)
+document.addEventListener("mouseleave",hideFormat)
+
+document.addEventListener("touchstart",(e)=>{
+if(formatEl.style.opacity==="1"){
+if(!formatEl.contains(e.target)) hideFormat()
+} else {
+showFormat()
+}
+},{passive:true})
 
 /* ---------- timer ---------- */
 
@@ -569,6 +586,8 @@ document.querySelectorAll("input,select")
 .forEach(el=>el.addEventListener("change",save))
 
 load()
+
+if(!endDate.value) configModal.style.display="block"
 
 setInterval(update,1000)
 
