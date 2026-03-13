@@ -1,6 +1,6 @@
 # Work Time Countdown Widget
 
-![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-success)
+[![pages-build-deployment](https://github.com/fredrike/countDownTimer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/fredrike/countDownTimer/actions/workflows/pages/pages-build-deployment)
 
 **Live demo:**
 https://fredrike.github.io/countDownTimer/
