@@ -2,20 +2,22 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Work Countdown</title>
+<title>Countdown Timer</title>
+
+<link rel="manifest" href="manifest.json">
 
 <style>
 
-html,body{
+body{
 margin:0;
-height:100%;
 background:#111;
-color:#fff;
+color:white;
 font-family:system-ui;
 display:flex;
 flex-direction:column;
 align-items:center;
 justify-content:center;
+height:100vh;
 overflow:hidden;
 }
 
@@ -28,20 +30,33 @@ text-align:center;
 #status{
 color:#aaa;
 margin-top:6px;
-font-size:14px;
 }
 
-.panel{
+#formatBar{
 position:fixed;
-bottom:0;
+top:10px;
+left:50%;
+transform:translateX(-50%);
+}
+
+#gear{
+position:fixed;
+bottom:12px;
+right:12px;
+font-size:24px;
+cursor:pointer;
+opacity:.7;
+}
+
+#configModal{
+display:none;
+position:fixed;
+bottom:60px;
+right:20px;
 background:#1e1e1e;
-width:100%;
-max-width:420px;
 padding:18px;
-box-sizing:border-box;
-transition:height .25s ease;
-border-top-left-radius:10px;
-border-top-right-radius:10px;
+border-radius:8px;
+width:300px;
 }
 
 label{
@@ -58,7 +73,7 @@ margin-top:4px;
 
 .row{
 display:flex;
-gap:8px;
+gap:6px;
 }
 
 .row input{
@@ -73,13 +88,26 @@ flex:1;
 <div id="timer">--</div>
 <div id="status"></div>
 
-<div class="panel" id="panel">
+<div id="formatBar">
+<select id="format">
+<option value="mwd">months, weeks, days</option>
+<option value="wdh">weeks, days, hours</option>
+<option value="wd">weeks, days</option>
+<option value="dhms">days, hours, minutes, seconds</option>
+<option value="dhm">days, hours, minutes</option>
+<option value="hms">hours, minutes, seconds</option>
+</select>
+</div>
+
+<div id="gear">⚙</div>
+
+<div id="configModal">
 
 <label>End date</label>
 <input id="endDate" type="datetime-local">
 
 <label>
-<input type="checkbox" id="fullDays"> Count full days (24h)
+<input type="checkbox" id="fullDays"> Count full days
 </label>
 
 <label>
@@ -97,16 +125,6 @@ flex:1;
 <input id="start2" type="time" value="13:00">
 <input id="end2" type="time" value="17:00">
 </div>
-
-<label>Display format</label>
-<select id="format">
-<option value="mwd">months, weeks, days</option>
-<option value="wdh">weeks, days, hours</option>
-<option value="wd">weeks, days</option>
-<option value="dhs">days, hours, seconds</option>
-<option value="dh">days, hours</option>
-<option value="hs">hours, seconds</option>
-</select>
 
 </div>
 
@@ -207,7 +225,7 @@ return[
 
 }
 
-/* ---------- time calculation ---------- */
+/* ---------- timer calculation ---------- */
 
 function remainingSeconds(now,end){
 
@@ -251,15 +269,15 @@ return total
 
 }
 
-/* ---------- display formatting ---------- */
+/* ---------- formatter ---------- */
 
 function formatTime(sec){
 
-let months=Math.floor(sec/(86400*30))
-sec%=86400*30
+let months=Math.floor(sec/2592000)
+sec%=2592000
 
-let weeks=Math.floor(sec/(86400*7))
-sec%=86400*7
+let weeks=Math.floor(sec/604800)
+sec%=604800
 
 let days=Math.floor(sec/86400)
 sec%=86400
@@ -267,7 +285,8 @@ sec%=86400
 let hours=Math.floor(sec/3600)
 sec%=3600
 
-let seconds=Math.floor(sec)
+let minutes=Math.floor(sec/60)
+let seconds=Math.floor(sec%60)
 
 switch(format.value){
 
@@ -280,36 +299,34 @@ return `${weeks}w ${days}d ${hours}h`
 case "wd":
 return `${weeks}w ${days}d`
 
-case "dhs":
-return `${days}d ${hours}h ${seconds}s`
+case "dhms":
+return `${days}d ${hours}h ${minutes}m ${seconds}s`
 
-case "dh":
-return `${days}d ${hours}h`
+case "dhm":
+return `${days}d ${hours}h ${minutes}m`
 
-case "hs":
-return `${hours + days*24}h ${seconds}s`
-
-}
+case "hms":
+return `${hours + days*24}h ${minutes}m ${seconds}s`
 
 }
 
-/* ---------- responsive font scaling ---------- */
+}
+
+/* ---------- auto scale ---------- */
 
 function autoScale(){
 
-let el=document.getElementById("timer")
-
 let size=window.innerWidth
-el.style.fontSize=size+"px"
+timer.style.fontSize=size+"px"
 
-while(el.scrollWidth>window.innerWidth*0.9){
+while(timer.scrollWidth>window.innerWidth*0.9){
 size-=4
-el.style.fontSize=size+"px"
+timer.style.fontSize=size+"px"
 }
 
 }
 
-/* ---------- persistence ---------- */
+/* ---------- storage ---------- */
 
 const STORAGE="workTimerSettings"
 
@@ -327,107 +344,17 @@ format:format.value
 }
 
 localStorage.setItem(STORAGE,JSON.stringify(s))
-writeHash()
 
 }
 
-function applySettings(s){
+/* ---------- gear popup ---------- */
 
-if(s.endDate)endDate.value=s.endDate
-if(s.start1)start1.value=s.start1
-if(s.end1)end1.value=s.end1
-if(s.start2)start2.value=s.start2
-if(s.end2)end2.value=s.end2
-if(s.format)format.value=s.format
-
-fullDays.checked=!!s.fullDays
-excludeHolidays.checked=!!s.excludeHolidays
-
+gear.onclick=()=>{
+configModal.style.display=
+configModal.style.display==="block"?"none":"block"
 }
 
-function load(){
-
-let hash=readHash()
-
-if(hash){
-applySettings(hash)
-save()
-return
-}
-
-let s=localStorage.getItem(STORAGE)
-if(!s)return
-
-applySettings(JSON.parse(s))
-
-}
-
-/* ---------- url sharing ---------- */
-
-function readHash(){
-
-if(!location.hash)return null
-
-let p=new URLSearchParams(location.hash.slice(1))
-
-return{
-endDate:p.get("end"),
-start1:p.get("s1"),
-end1:p.get("e1"),
-start2:p.get("s2"),
-end2:p.get("e2"),
-fullDays:p.get("fullDays")==="true",
-excludeHolidays:p.get("holidays")==="true",
-format:p.get("format")
-}
-
-}
-
-function writeHash(){
-
-let p=new URLSearchParams()
-
-p.set("end",endDate.value)
-p.set("s1",start1.value)
-p.set("e1",end1.value)
-p.set("s2",start2.value)
-p.set("e2",end2.value)
-p.set("fullDays",fullDays.checked)
-p.set("holidays",excludeHolidays.checked)
-p.set("format",format.value)
-
-location.hash=p.toString()
-
-}
-
-/* ---------- widget mode ---------- */
-
-function widgetMode(){
-
-let p=new URLSearchParams(location.hash.slice(1))
-return p.get("widget")==="true"
-
-}
-
-if(widgetMode()){
-document.getElementById("panel").style.display="none"
-}
-
-/* ---------- auto hide panel ---------- */
-
-let panel=document.getElementById("panel")
-
-window.addEventListener("mouseleave",()=>{
-panel.style.height="0px"
-panel.style.overflow="hidden"
-})
-
-window.addEventListener("mouseenter",()=>{
-panel.style.height="auto"
-panel.style.overflow="visible"
-})
-
-/* ---------- timer ---------- */
+/* ---------- timer loop ---------- */
 
 function update(){
 
@@ -449,13 +376,17 @@ autoScale()
 document.querySelectorAll("input,select")
 .forEach(el=>el.addEventListener("change",save))
 
-load()
-
 setInterval(update,1000)
 
 update()
 
 window.addEventListener("resize",autoScale)
+
+/* ---------- PWA ---------- */
+
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("service-worker.js")
+}
 
 </script>
 
