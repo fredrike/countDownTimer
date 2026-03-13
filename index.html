@@ -3,7 +3,7 @@
 <head>
 
 <meta charset="UTF-8">
-<title>Work Countdown</title>
+<title>Countdown Timer</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
@@ -137,10 +137,12 @@ flex:1;
 </label>
 
 <label>
-<input type="checkbox" id="excludeHolidays"> Exclude Swedish holidays
+<input type="checkbox" id="excludeHolidays"> Only count workdays (in Sweden)
 </label>
 
 <label>Morning segment</label>
+
+<div id="segments">
 
 <div class="row">
 
@@ -155,6 +157,8 @@ flex:1;
 
 <input id="start2" type="time" value="13:00">
 <input id="end2" type="time" value="17:00">
+
+</div>
 
 </div>
 
@@ -509,6 +513,13 @@ configModal.style.display=
 configModal.style.display==="block"?"none":"block"
 
 }
+
+function toggleSegments(){
+segments.style.display=excludeHolidays.checked?"none":"block"
+}
+
+excludeHolidays.addEventListener("change",toggleSegments)
+toggleSegments()
 
 const formatEl=document.getElementById("format")
 document.addEventListener("mouseenter",()=>{
