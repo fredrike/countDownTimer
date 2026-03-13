@@ -32,11 +32,34 @@ color:#aaa;
 margin-top:6px;
 }
 
-#formatBar{
-position:fixed;
-top:10px;
-left:50%;
-transform:translateX(-50%);
+.wrapper{
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+#format{
+display:block;
+margin-top:0;
+max-height:0;
+overflow:hidden;
+background:#222;
+color:white;
+border:1px solid #444;
+border-radius:6px;
+padding:0 12px;
+font-size:14px;
+font-family:system-ui;
+cursor:pointer;
+text-align:center;
+opacity:0;
+pointer-events:none;
+transition:opacity 0.3s ease, max-height 0.3s ease, margin-top 0.3s ease, padding 0.3s ease;
+}
+
+#format:focus{
+outline:none;
+border-color:#888;
 }
 
 #gear{
@@ -89,22 +112,16 @@ flex:1;
 
 <body>
 
+<div class="wrapper">
 <div id="timer">--</div>
 <div id="status"></div>
-
-<div id="formatBar">
-
 <select id="format">
-
-<option value="mwd">months, weeks, days</option>
-<option value="wdh">weeks, days, hours</option>
-<option value="wd">weeks, days</option>
-<option value="dhms">days, hours, minutes, seconds</option>
-<option value="dhm">days, hours, minutes</option>
-<option value="hms">hours, minutes, seconds</option>
-
+<option value="wd">Weeks, Days</option>
+<option value="wdh">Weeks, Days, Hours</option>
+<option value="dh">Days, Hours</option>
+<option value="hm">Hours, Minutes</option>
+<option value="hms" selected>Hours, Minutes, Seconds</option>
 </select>
-
 </div>
 
 <div id="gear">⚙</div>
@@ -300,44 +317,44 @@ return total
 
 /* ---------- formatter ---------- */
 
+const WORK_DAY_SECS  = 8 * 3600
+const WORK_WEEK_SECS = 5 * WORK_DAY_SECS
+
 function formatTime(sec){
 
-let months=Math.floor(sec/2592000)
-sec%=2592000
+const pad = n => String(n).padStart(2,"0")
 
-let weeks=Math.floor(sec/604800)
-sec%=604800
-
-let days=Math.floor(sec/86400)
-sec%=86400
-
-let hours=Math.floor(sec/3600)
-sec%=3600
-
-let minutes=Math.floor(sec/60)
-let seconds=Math.floor(sec%60)
-
-switch(format.value){
-
-case "mwd":
-return `${months}m ${weeks}w ${days}d`
-
-case "wdh":
-return `${weeks}w ${days}d ${hours}h`
-
-case "wd":
-return `${weeks}w ${days}d`
-
-case "dhms":
-return `${days}d ${hours}h ${minutes}m ${seconds}s`
-
-case "dhm":
-return `${days}d ${hours}h ${minutes}m`
-
-case "hms":
-return `${hours + days*24}h ${minutes}m ${seconds}s`
-
+if(format.value==="hms"){
+let h=Math.floor(sec/3600)
+let m=Math.floor((sec%3600)/60)
+let s=Math.floor(sec%60)
+return pad(h)+":"+pad(m)+":"+pad(s)
 }
+
+if(format.value==="hm"){
+let h=Math.floor(sec/3600)
+let m=Math.floor((sec%3600)/60)
+return pad(h)+"h "+pad(m)+"m"
+}
+
+if(format.value==="dh"){
+let d=Math.floor(sec/WORK_DAY_SECS)
+let h=Math.floor((sec%WORK_DAY_SECS)/3600)
+return d+"d "+pad(h)+"h"
+}
+
+if(format.value==="wdh"){
+let w=Math.floor(sec/WORK_WEEK_SECS)
+let rem=sec%WORK_WEEK_SECS
+let d=Math.floor(rem/WORK_DAY_SECS)
+let h=Math.floor((rem%WORK_DAY_SECS)/3600)
+return w+"w "+d+"d "+pad(h)+"h"
+}
+
+let w=Math.floor(sec/WORK_WEEK_SECS)
+let rem=sec%WORK_WEEK_SECS
+let d=Math.floor(rem/WORK_DAY_SECS)
+return w+"w "+d+"d"
 
 }
 
@@ -345,11 +362,11 @@ return `${hours + days*24}h ${minutes}m ${seconds}s`
 
 function autoScale(){
 
-let size=window.innerWidth
+let size=Math.min(window.innerWidth,window.innerHeight*1.5)
 
 timer.style.fontSize=size+"px"
 
-while(timer.scrollWidth>window.innerWidth*0.9){
+while(timer.scrollWidth>window.innerWidth*0.9||timer.offsetHeight>window.innerHeight*0.7){
 
 size-=4
 timer.style.fontSize=size+"px"
@@ -460,6 +477,22 @@ configModal.style.display=
 configModal.style.display==="block"?"none":"block"
 
 }
+
+const formatEl=document.getElementById("format")
+document.addEventListener("mouseenter",()=>{
+formatEl.style.opacity="1"
+formatEl.style.maxHeight="50px"
+formatEl.style.marginTop="20px"
+formatEl.style.padding="6px 12px"
+formatEl.style.pointerEvents="auto"
+})
+document.addEventListener("mouseleave",()=>{
+formatEl.style.opacity="0"
+formatEl.style.maxHeight="0"
+formatEl.style.marginTop="0"
+formatEl.style.padding="0 12px"
+formatEl.style.pointerEvents="none"
+})
 
 /* ---------- timer ---------- */
 
