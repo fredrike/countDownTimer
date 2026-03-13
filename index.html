@@ -347,10 +347,11 @@ return total
 
 /* ---------- formatter ---------- */
 
-const WORK_DAY_SECS  = 8 * 3600
-const WORK_WEEK_SECS = 5 * WORK_DAY_SECS
-
 function formatTime(sec){
+
+const segs=getSegments()
+const DAY_SECS=segs.reduce((sum,seg)=>sum+(seg[1]-seg[0])*60,0)
+const WEEK_SECS=5*DAY_SECS
 
 const pad = n => String(n).padStart(2,"0")
 
@@ -368,22 +369,22 @@ return pad(h)+"h "+pad(m)+"m"
 }
 
 if(format.value==="dh"){
-let d=Math.floor(sec/WORK_DAY_SECS)
-let h=Math.floor((sec%WORK_DAY_SECS)/3600)
+let d=Math.floor(sec/DAY_SECS)
+let h=Math.floor((sec%DAY_SECS)/3600)
 return d+"d "+pad(h)+"h"
 }
 
 if(format.value==="wdh"){
-let w=Math.floor(sec/WORK_WEEK_SECS)
-let rem=sec%WORK_WEEK_SECS
-let d=Math.floor(rem/WORK_DAY_SECS)
-let h=Math.floor((rem%WORK_DAY_SECS)/3600)
+let w=Math.floor(sec/WEEK_SECS)
+let rem=sec%WEEK_SECS
+let d=Math.floor(rem/DAY_SECS)
+let h=Math.floor((rem%DAY_SECS)/3600)
 return w+"w "+d+"d "+pad(h)+"h"
 }
 
-let w=Math.floor(sec/WORK_WEEK_SECS)
-let rem=sec%WORK_WEEK_SECS
-let d=Math.floor(rem/WORK_DAY_SECS)
+let w=Math.floor(sec/WEEK_SECS)
+let rem=sec%WEEK_SECS
+let d=Math.floor(rem/DAY_SECS)
 return w+"w "+d+"d"
 
 }
