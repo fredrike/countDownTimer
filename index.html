@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Work Countdown</title>
+
+<style>
+
+html,body{
+margin:0;
+height:100%;
+background:#111;
+color:#fff;
+font-family:system-ui;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
+
+#timer{
+font-weight:600;
+white-space:nowrap;
+text-align:center;
+}
+
+#status{
+color:#aaa;
+margin-top:6px;
+font-size:14px;
+}
+
+.panel{
+position:fixed;
+bottom:0;
+background:#1e1e1e;
+width:100%;
+max-width:420px;
+padding:18px;
+box-sizing:border-box;
+transition:height .25s ease;
+border-top-left-radius:10px;
+border-top-right-radius:10px;
+}
+
+label{
+display:block;
+margin-top:10px;
+font-size:13px;
+}
+
+input,select{
+width:100%;
+padding:6px;
+margin-top:4px;
+}
+
+.row{
+display:flex;
+gap:8px;
+}
+
+.row input{
+flex:1;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="timer">--</div>
+<div id="status"></div>
+
+<div class="panel" id="panel">
+
+<label>End date</label>
+<input id="endDate" type="datetime-local">
+
+<label>
+<input type="checkbox" id="fullDays"> Count full days (24h)
+</label>
+
+<label>
+<input type="checkbox" id="excludeHolidays"> Exclude Swedish holidays
+</label>
+
+<label>Morning segment</label>
+<div class="row">
+<input id="start1" type="time" value="08:00">
+<input id="end1" type="time" value="12:00">
+</div>
+
+<label>Afternoon segment</label>
+<div class="row">
+<input id="start2" type="time" value="13:00">
+<input id="end2" type="time" value="17:00">
+</div>
+
+<label>Display format</label>
+<select id="format">
+<option value="mwd">months, weeks, days</option>
+<option value="wdh">weeks, days, hours</option>
+<option value="wd">weeks, days</option>
+<option value="dhs">days, hours, seconds</option>
+<option value="dh">days, hours</option>
+<option value="hs">hours, seconds</option>
+</select>
+
+</div>
+
+<script>
+
+/* ---------- utilities ---------- */
+
+const pad=n=>String(n).padStart(2,"0")
+
+function timeToMinutes(t){
+let [h,m]=t.split(":").map(Number)
+return h*60+m
+}
+
+function isWeekend(d){
+let day=d.getDay()
+return day===0||day===6
+}
+
+/* ---------- swedish holidays ---------- */
+
+function easter(y){
+let f=Math.floor
+let G=y%19
+let C=f(y/100)
+let H=(C-f(C/4)-f((8*C+13)/25)+19*G+15)%30
+let I=H-f(H/28)*(1-f(29/(H+1))*f((21-G)/11))
+let J=(y+f(y/4)+I+2-C+f(C/4))%7
+let L=I-J
+let m=3+f((L+40)/44)
+let d=L+28-31*f(m/4)
+return new Date(y,m-1,d)
+}
+
+function addDays(d,n){
+let r=new Date(d)
+r.setDate(r.getDate()+n)
+return r
+}
+
+function midsummerEve(year){
+let d=new Date(year,5,19)
+while(d.getDay()!=5)d.setDate(d.getDate()+1)
+return d
+}
+
+function allSaints(year){
+let d=new Date(year,9,31)
+while(d.getDay()!=6)d.setDate(d.getDate()+1)
+return d
+}
+
+function holidays(year){
+
+let e=easter(year)
+
+return[
+new Date(year,0,1),
+new Date(year,0,6),
+addDays(e,-2),
+addDays(e,1),
+new Date(year,4,1),
+addDays(e,39),
+addDays(e,50),
+new Date(year,5,6),
+midsummerEve(year),
+allSaints(year),
+new Date(year,11,25),
+new Date(year,11,26)
+]
+
+}
+
+function isHoliday(date){
+
+if(!excludeHolidays.checked)return false
+
+let list=holidays(date.getFullYear())
+
+return list.some(h=>
+h.getFullYear()==date.getFullYear() &&
+h.getMonth()==date.getMonth() &&
+h.getDate()==date.getDate()
+)
+
+}
+
+/* ---------- work segments ---------- */
+
+function getSegments(){
+
+if(fullDays.checked)return [[0,1440]]
+
+return[
+[timeToMinutes(start1.value),timeToMinutes(end1.value)],
+[timeToMinutes(start2.value),timeToMinutes(end2.value)]
+]
+
+}
+
+/* ---------- time calculation ---------- */
+
+function remainingSeconds(now,end){
+
+if(now>=end)return 0
+
+let segments=getSegments()
+let total=0
+let d=new Date(now)
+
+while(d<end){
+
+let day=new Date(d)
+day.setHours(0,0,0,0)
+
+if(!isWeekend(day)&&!isHoliday(day)){
+
+for(let seg of segments){
+
+let s=new Date(day)
+let e=new Date(day)
+
+s.setMinutes(seg[0])
+e.setMinutes(seg[1])
+
+let startTime=new Date(Math.max(now,s))
+let endTime=new Date(Math.min(end,e))
+
+if(endTime>startTime)
+total+=(endTime-startTime)/1000
+
+}
+
+}
+
+d.setDate(d.getDate()+1)
+d.setHours(0,0,0,0)
+
+}
+
+return total
+
+}
+
+/* ---------- display formatting ---------- */
+
+function formatTime(sec){
+
+let months=Math.floor(sec/(86400*30))
+sec%=86400*30
+
+let weeks=Math.floor(sec/(86400*7))
+sec%=86400*7
+
+let days=Math.floor(sec/86400)
+sec%=86400
+
+let hours=Math.floor(sec/3600)
+sec%=3600
+
+let seconds=Math.floor(sec)
+
+switch(format.value){
+
+case "mwd":
+return `${months}m ${weeks}w ${days}d`
+
+case "wdh":
+return `${weeks}w ${days}d ${hours}h`
+
+case "wd":
+return `${weeks}w ${days}d`
+
+case "dhs":
+return `${days}d ${hours}h ${seconds}s`
+
+case "dh":
+return `${days}d ${hours}h`
+
+case "hs":
+return `${hours + days*24}h ${seconds}s`
+
+}
+
+}
+
+/* ---------- responsive font scaling ---------- */
+
+function autoScale(){
+
+let el=document.getElementById("timer")
+
+let size=window.innerWidth
+el.style.fontSize=size+"px"
+
+while(el.scrollWidth>window.innerWidth*0.9){
+size-=4
+el.style.fontSize=size+"px"
+}
+
+}
+
+/* ---------- persistence ---------- */
+
+const STORAGE="workTimerSettings"
+
+function save(){
+
+let s={
+endDate:endDate.value,
+start1:start1.value,
+end1:end1.value,
+start2:start2.value,
+end2:end2.value,
+fullDays:fullDays.checked,
+excludeHolidays:excludeHolidays.checked,
+format:format.value
+}
+
+localStorage.setItem(STORAGE,JSON.stringify(s))
+writeHash()
+
+}
+
+function applySettings(s){
+
+if(s.endDate)endDate.value=s.endDate
+if(s.start1)start1.value=s.start1
+if(s.end1)end1.value=s.end1
+if(s.start2)start2.value=s.start2
+if(s.end2)end2.value=s.end2
+if(s.format)format.value=s.format
+
+fullDays.checked=!!s.fullDays
+excludeHolidays.checked=!!s.excludeHolidays
+
+}
+
+function load(){
+
+let hash=readHash()
+
+if(hash){
+applySettings(hash)
+save()
+return
+}
+
+let s=localStorage.getItem(STORAGE)
+if(!s)return
+
+applySettings(JSON.parse(s))
+
+}
+
+/* ---------- url sharing ---------- */
+
+function readHash(){
+
+if(!location.hash)return null
+
+let p=new URLSearchParams(location.hash.slice(1))
+
+return{
+endDate:p.get("end"),
+start1:p.get("s1"),
+end1:p.get("e1"),
+start2:p.get("s2"),
+end2:p.get("e2"),
+fullDays:p.get("fullDays")==="true",
+excludeHolidays:p.get("holidays")==="true",
+format:p.get("format")
+}
+
+}
+
+function writeHash(){
+
+let p=new URLSearchParams()
+
+p.set("end",endDate.value)
+p.set("s1",start1.value)
+p.set("e1",end1.value)
+p.set("s2",start2.value)
+p.set("e2",end2.value)
+p.set("fullDays",fullDays.checked)
+p.set("holidays",excludeHolidays.checked)
+p.set("format",format.value)
+
+location.hash=p.toString()
+
+}
+
+/* ---------- widget mode ---------- */
+
+function widgetMode(){
+
+let p=new URLSearchParams(location.hash.slice(1))
+return p.get("widget")==="true"
+
+}
+
+if(widgetMode()){
+document.getElementById("panel").style.display="none"
+}
+
+/* ---------- auto hide panel ---------- */
+
+let panel=document.getElementById("panel")
+
+window.addEventListener("mouseleave",()=>{
+panel.style.height="0px"
+panel.style.overflow="hidden"
+})
+
+window.addEventListener("mouseenter",()=>{
+panel.style.height="auto"
+panel.style.overflow="visible"
+})
+
+/* ---------- timer ---------- */
+
+function update(){
+
+if(!endDate.value)return
+
+let now=new Date()
+let end=new Date(endDate.value)
+
+let sec=remainingSeconds(now,end)
+
+timer.innerText=formatTime(sec)
+
+autoScale()
+
+}
+
+/* ---------- init ---------- */
+
+document.querySelectorAll("input,select")
+.forEach(el=>el.addEventListener("change",save))
+
+load()
+
+setInterval(update,1000)
+
+update()
+
+window.addEventListener("resize",autoScale)
+
+</script>
+
+</body>
+</html>
