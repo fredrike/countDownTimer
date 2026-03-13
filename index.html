@@ -428,7 +428,8 @@ start2:p.get("s2"),
 end2:p.get("e2"),
 fullDays:p.get("fullDays")==="true",
 excludeHolidays:p.get("holidays")==="true",
-format:p.get("format")
+format:p.get("format"),
+widget:p.get("widget")==="true"
 
 }
 
@@ -593,7 +594,14 @@ document.querySelectorAll("input,select")
 
 load()
 
-if(!endDate.value) configModal.style.display="block"
+const WIDGET=new URLSearchParams(location.hash.slice(1)).get("widget")==="true"
+
+if(WIDGET){
+gear.style.display="none"
+formatEl.style.display="none"
+} else if(!endDate.value){
+configModal.style.display="block"
+}
 
 setInterval(update,1000)
 
