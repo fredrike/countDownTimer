@@ -311,7 +311,8 @@ let startDay=new Date(now); startDay.setHours(0,0,0,0)
 let endDay=new Date(end);   endDay.setHours(0,0,0,0)
 
 function partialDay(dayDate,from,to){
-if(isWeekend(dayDate)||isHoliday(dayDate)) return 0
+if(!fullDays.checked&&(isWeekend(dayDate)||isHoliday(dayDate))) return 0
+if(fullDays.checked&&isHoliday(dayDate)) return 0
 let s=0
 for(let seg of segs){
 let segS=new Date(dayDate); segS.setMinutes(seg[0])
@@ -336,7 +337,12 @@ total+=partialDay(endDay,endDay,end)
 // full days in between [startDay+1, endDay)
 let rangeStart=new Date(startDay); rangeStart.setDate(rangeStart.getDate()+1)
 if(rangeStart<endDay){
-let fullWorkdays=weekdaysBetween(rangeStart,endDay)-holidaysInRange(rangeStart,endDay)
+let fullWorkdays
+if(fullDays.checked){
+fullWorkdays=Math.round((endDay-rangeStart)/86400000)-holidaysInRange(rangeStart,endDay)
+} else {
+fullWorkdays=weekdaysBetween(rangeStart,endDay)-holidaysInRange(rangeStart,endDay)
+}
 total+=fullWorkdays*secsPerDay
 }
 
