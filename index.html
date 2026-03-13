@@ -271,45 +271,74 @@ return [
 
 }
 
-/* ---------- optimized calculation ---------- */
+/* ---------- calculation ---------- */
+
+// Count weekdays in [d1, d2) — both dates at midnight — O(1)
+function weekdaysBetween(d1,d2){
+let days=Math.round((d2-d1)/86400000)
+if(days<=0) return 0
+let weeks=Math.floor(days/7)
+let rem=days%7
+let count=weeks*5
+let startDay=d1.getDay()
+for(let i=0;i<rem;i++){
+let day=(startDay+i)%7
+if(day!==0&&day!==6) count++
+}
+return count
+}
+
+// Count weekday holidays falling in [d1, d2) — O(years * 12)
+function holidaysInRange(d1,d2){
+if(!excludeHolidays.checked) return 0
+let count=0
+for(let y=d1.getFullYear();y<=d2.getFullYear();y++){
+for(let h of holidays(y)){
+if(h>=d1&&h<d2&&h.getDay()!==0&&h.getDay()!==6) count++
+}
+}
+return count
+}
 
 function remainingSeconds(now,end){
 
 if(now>=end) return 0
 
-let segments=getSegments()
-
+const segs=getSegments()
+const secsPerDay=segs.reduce((sum,seg)=>sum+(seg[1]-seg[0])*60,0)
 let total=0
-let d=new Date(now)
 
-while(d<end){
+let startDay=new Date(now); startDay.setHours(0,0,0,0)
+let endDay=new Date(end);   endDay.setHours(0,0,0,0)
 
-let day=new Date(d)
-day.setHours(0,0,0,0)
-
-if(!isWeekend(day) && !isHoliday(day)){
-
-for(let seg of segments){
-
-let s=new Date(day)
-let e=new Date(day)
-
-s.setMinutes(seg[0])
-e.setMinutes(seg[1])
-
-let startTime=new Date(Math.max(now,s))
-let endTime=new Date(Math.min(end,e))
-
-if(endTime>startTime)
-total+=(endTime-startTime)/1000
-
+function partialDay(dayDate,from,to){
+if(isWeekend(dayDate)||isHoliday(dayDate)) return 0
+let s=0
+for(let seg of segs){
+let segS=new Date(dayDate); segS.setMinutes(seg[0])
+let segE=new Date(dayDate); segE.setMinutes(seg[1])
+let a=new Date(Math.max(from,segS))
+let b=new Date(Math.min(to,segE))
+if(b>a) s+=(b-a)/1000
+}
+return s
 }
 
-}
+if(startDay.getTime()===endDay.getTime())
+return partialDay(startDay,now,end)
 
-d.setDate(d.getDate()+1)
-d.setHours(0,0,0,0)
+// partial first day
+let firstDayEnd=new Date(startDay); firstDayEnd.setDate(firstDayEnd.getDate()+1)
+total+=partialDay(startDay,now,firstDayEnd)
 
+// partial last day
+total+=partialDay(endDay,endDay,end)
+
+// full days in between [startDay+1, endDay)
+let rangeStart=new Date(startDay); rangeStart.setDate(rangeStart.getDate()+1)
+if(rangeStart<endDay){
+let fullWorkdays=weekdaysBetween(rangeStart,endDay)-holidaysInRange(rangeStart,endDay)
+total+=fullWorkdays*secsPerDay
 }
 
 return total
@@ -435,6 +464,7 @@ format:format.value
 
 localStorage.setItem(STORAGE,JSON.stringify(s))
 writeHash()
+_lastTimerLen=-1
 
 }
 
@@ -497,6 +527,8 @@ formatEl.style.pointerEvents="none"
 
 /* ---------- timer ---------- */
 
+let _lastTimerLen=-1
+
 function update(){
 
 if(!endDate.value) return
@@ -505,10 +537,14 @@ let now=new Date()
 let end=new Date(endDate.value)
 
 let sec=remainingSeconds(now,end)
+let text=formatTime(sec)
 
-timer.innerText=formatTime(sec)
+timer.innerText=text
 
+if(text.length!==_lastTimerLen){
+_lastTimerLen=text.length
 autoScale()
+}
 
 }
 
